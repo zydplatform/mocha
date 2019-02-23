@@ -278,7 +278,7 @@ exports.mixinMochaAssertions = function(expect) {
     ) {
       expect(result.stats.passes, '[not] to be greater than', 0);
     })
-    .addAssertion('<JSONRunResult> [not] to have failed tests', function(
+    .addAssertion('<JSONRunResult> [not] to have failed [tests]', function(
       expect,
       result
     ) {

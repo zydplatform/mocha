@@ -1,298 +1,145 @@
 'use strict';
 
-var format = require('util').format;
-var spawn = require('cross-spawn').spawn;
-var path = require('path');
-var Base = require('../../lib/reporters/base');
+const {unparse} = require('../../lib/cli/unparser');
+const {spawn} = require('cross-spawn');
+const {isNodeFlag} = require('../../lib/cli/node-flags');
+const path = require('path');
 
-var DEFAULT_FIXTURE = resolveFixturePath('__default__');
-var MOCHA_EXECUTABLE = require.resolve('../../bin/mocha');
-var _MOCHA_EXECUTABLE = require.resolve('../../bin/_mocha');
+const DEFAULT_FIXTURE = require.resolve(
+  './common/fixtures/__default__.fixture.js'
+);
+const MOCHA_EXECUTABLE = require.resolve('../../bin/mocha');
+const _MOCHA_EXECUTABLE = require.resolve('../../bin/_mocha');
+const MOCHIFY_EXECUTABLE = require.resolve('mochify/bin/cmd.js');
 
-module.exports = {
-  DEFAULT_FIXTURE: DEFAULT_FIXTURE,
-  /**
-   * Invokes the mocha binary for the given fixture with color output disabled.
-   * Accepts an array of additional command line args to pass. The callback is
-   * invoked with a summary of the run, in addition to its output. The summary
-   * includes the number of passing, pending, and failing tests, as well as the
-   * exit code. Useful for testing different reporters.
-   *
-   * By default, `STDERR` is ignored. Pass `{stdio: 'pipe'}` as `opts` if you
-   * want it.
-   * Example response:
-   * {
-   *   pending: 0,
-   *   passing: 0,
-   *   failing: 1,
-   *   code:    1,
-   *   output:  '...'
-   * }
-   *
-   * @param {string} fixturePath - Path to fixture .js file
-   * @param {string[]} args - Extra args to mocha executable
-   * @param {Function} fn - Callback
-   * @param {Object} [opts] - Options for `spawn()`
-   */
-  runMocha: function(fixturePath, args, fn, opts) {
-    if (typeof args === 'function') {
-      opts = fn;
-      fn = args;
-      args = [];
-    }
-
-    var path;
-
-    path = resolveFixturePath(fixturePath);
-    args = args || [];
-
-    invokeSubMocha(
-      args.concat(['-C', path]),
-      function(err, res) {
-        if (err) {
-          return fn(err);
-        }
-
-        fn(null, getSummary(res));
-      },
-      opts
-    );
-  },
-
-  /**
-   * Invokes the mocha binary for the given fixture using the JSON reporter,
-   * returning the parsed output, as well as exit code.
-   *
-   * By default, `STDERR` is ignored. Pass `{stdio: 'pipe'}` as `opts` if you
-   * want it.
-   * @param {string} fixturePath - Path from __dirname__
-   * @param {string[]} args - Array of args
-   * @param {Function} fn - Callback
-   * @param {Object} [opts] - Opts for `spawn()`
-   * @returns {*} Parsed object
-   */
-  runMochaJSON: function(fixturePath, args, fn, opts) {
-    if (typeof args === 'function') {
-      opts = fn;
-      fn = args;
-      args = [];
-    }
-
-    var path;
-
-    path = resolveFixturePath(fixturePath);
-    args = (args || []).concat('--reporter', 'json', path);
-
-    return invokeMocha(
-      args,
-      function(err, res) {
-        if (err) {
-          return fn(err);
-        }
-
-        var result;
-        try {
-          // attempt to catch a JSON parsing error *only* here.
-          // previously, the callback was called within this `try` block,
-          // which would result in errors thrown from the callback
-          // getting caught by the `catch` block below.
-          result = toJSONRunResult(res);
-        } catch (err) {
-          return fn(
-            new Error(
-              format(
-                'Failed to parse JSON reporter output. Error:\n%O\nResult:\n%O',
-                err,
-                res
-              )
-            )
-          );
-        }
-        fn(null, result);
-      },
-      opts
-    );
-  },
-  /**
-   * Invokes the mocha binary for the given fixture using the JSON reporter,
-   * returning the **raw** string output, as well as exit code.
-   *
-   * By default, `STDERR` is ignored. Pass `{stdio: 'pipe'}` as `opts` if you
-   * want it.
-   * @param {string} fixturePath - Path from __dirname__
-   * @param {string[]} args - Array of args
-   * @param {Function} fn - Callback
-   * @param {Object} [opts] - Opts for `spawn()`
-   * @returns {string} Raw output
-   */
-  runMochaJSONRaw: function(fixturePath, args, fn, opts) {
-    var path;
-
-    path = resolveFixturePath(fixturePath);
-    args = args || [];
-
-    return invokeSubMocha(
-      args.concat(['--reporter', 'json', path]),
-      function(err, resRaw) {
-        if (err) return fn(err);
-
-        fn(null, resRaw);
-      },
-      opts
-    );
-  },
-
-  /**
-   * regular expression used for splitting lines based on new line / dot symbol.
-   */
-  splitRegExp: new RegExp('[\\n' + Base.symbols.dot + ']+'),
-
-  /**
-   * Invokes the mocha binary. Accepts an array of additional command line args
-   * to pass. The callback is invoked with the exit code and output. Optional
-   * current working directory as final parameter.
-   *
-   * By default, `STDERR` is ignored. Pass `{stdio: 'pipe'}` as `opts` if you
-   * want it.
-   *
-   * In most cases runMocha should be used instead.
-   *
-   * Example response:
-   * {
-   *   code:    1,
-   *   output:  '...'
-   * }
-   *
-   * @param {Array<string>} args - Extra args to mocha executable
-   * @param {Function} done - Callback
-   * @param {Object} [opts] - Options for `spawn()`
-   */
-  invokeMocha: invokeMocha,
-
-  /**
-   * Resolves the path to a fixture to the full path.
-   */
-  resolveFixturePath: resolveFixturePath,
-
-  toJSONRunResult: toJSONRunResult,
-
-  /**
-   * Given a regexp-like string, escape it so it can be used with the `RegExp` constructor
-   * @param {string} str - string to be escaped
-   * @returns {string} Escaped string
-   */
-  escapeRegExp: function escapeRegExp(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-  }
+exports.constants = {
+  MOCHA_EXECUTABLE,
+  _MOCHA_EXECUTABLE,
+  MOCHIFY_EXECUTABLE
 };
 
-/**
- * Coerce output as returned by _spawnMochaWithListeners using JSON reporter into a JSONRunResult as
- * recognized by our custom unexpected assertions
- * @param {string} result - Raw stdout from Mocha run using JSON reporter
- * @private
- */
-function toJSONRunResult(result) {
-  var code = result.code;
-  result = JSON.parse(result.output);
-  result.code = code;
-  return result;
-}
-
-/**
- * Creates arguments loading a default fixture if none provided
- *
- * @param {string[]|*} [args] - Arguments to `spawn`
- * @returns string[]
- */
-function defaultArgs(args) {
-  return !args || !args.length ? ['--file', DEFAULT_FIXTURE] : args;
-}
-
-function invokeMocha(args, fn, opts) {
-  if (typeof args === 'function') {
-    opts = fn;
-    fn = args;
-    args = [];
+const resolveFixturePath = fixture => {
+  if (path.extname(fixture) !== '.js') {
+    fixture += '.fixture.js';
   }
-  return _spawnMochaWithListeners(
-    defaultArgs([MOCHA_EXECUTABLE].concat(args)),
-    fn,
-    opts
-  );
-}
-
-function invokeSubMocha(args, fn, opts) {
-  if (typeof args === 'function') {
-    opts = fn;
-    fn = args;
-    args = [];
+  if (path.dirname(fixture) === '.') {
+    return path.join('test', 'integration', 'fixtures', fixture);
   }
-  return _spawnMochaWithListeners(
-    defaultArgs([_MOCHA_EXECUTABLE].concat(args)),
-    fn,
-    opts
-  );
-}
+  return fixture;
+};
+
+const hasNodeFlags = opts => Object.keys(opts).some(isNodeFlag);
 
 /**
  * Spawns Mocha in a subprocess and returns an object containing its output and exit code
  *
  * @param {string[]} args - Path to executable and arguments
- * @param {Function} fn - Callback
- * @param {Object|string} [opts] - Options to `cross-spawn`, or 'pipe' for shortcut to `{stdio: pipe}`
- * @returns {ChildProcess}
- * @private
+ * @returns {Promise<string>} Output
+ * @ignore
  */
-function _spawnMochaWithListeners(args, fn, opts) {
-  var output = '';
-  if (opts === 'pipe') {
-    opts = {stdio: 'pipe'};
-  }
-  opts = Object.assign(
-    {
-      cwd: process.cwd(),
-      stdio: ['ignore', 'pipe', 'ignore']
-    },
-    opts || {}
-  );
-  var mocha = spawn(process.execPath, args, opts);
-  var listener = function(data) {
-    output += data;
-  };
+const spawnAsync = (exports.spawnAsync = (args, opts) => {
+  return new Promise((resolve, reject) => {
+    let output = '';
+    opts = Object.assign(
+      {stdio: ['ignore', 'pipe', 'ignore']},
+      opts === 'pipe' ? {stdio: 'pipe'} : opts
+    );
+    const proc = spawn(process.execPath, args, opts);
+    const listener = data => {
+      output += data;
+    };
 
-  mocha.stdout.on('data', listener);
-  if (mocha.stderr) {
-    mocha.stderr.on('data', listener);
-  }
-  mocha.on('error', fn);
+    proc.stdout.on('data', listener);
+    if (proc.stderr) {
+      proc.stderr.on('data', listener);
+    }
+    proc.on('error', reject);
 
-  mocha.on('close', function(code) {
-    fn(null, {
-      output: output,
-      code: code,
-      args: args
+    proc.on('close', code => {
+      resolve({
+        output: output,
+        code: code,
+        execPath: process.execPath,
+        args: args,
+        opts: opts
+      });
     });
   });
+});
 
-  return mocha;
-}
-
-function resolveFixturePath(fixture) {
-  if (path.extname(fixture) !== '.js') {
-    fixture += '.fixture.js';
+const run = (file, args, opts) => {
+  let executable;
+  if (process.env.BROWSER) {
+    executable = MOCHIFY_EXECUTABLE;
+  } else if (hasNodeFlags(args)) {
+    executable = MOCHA_EXECUTABLE;
+  } else {
+    executable = _MOCHA_EXECUTABLE;
   }
-  return path.join('test', 'integration', 'fixtures', fixture);
-}
+  const {nodeArgs, mochaArgs} = unparse(args);
+  return spawnAsync([executable].concat(nodeArgs, mochaArgs), opts);
+};
 
-function getSummary(res) {
-  return ['passing', 'pending', 'failing'].reduce(function(summary, type) {
-    var pattern, match;
+const parseParameters = (file, args, done, opts) => {
+  if (typeof file === 'object') {
+    done = opts;
+    opts = args;
+    args = file;
+    file = DEFAULT_FIXTURE;
+  }
+  if (typeof args === 'function') {
+    opts = done;
+    done = args;
+    args = {};
+  }
+  if (typeof done !== 'function') {
+    opts = done;
+    done = null;
+  }
+  args._ = [resolveFixturePath(file)];
+  return [file, args, opts, done];
+};
 
-    pattern = new RegExp('  (\\d+) ' + type + '\\s');
-    match = pattern.exec(res.output);
+const parseEpilog = result =>
+  ['passing', 'pending', 'failing'].reduce((summary, type) => {
+    const pattern = new RegExp('  (\\d+) ' + type + '\\s');
+    const match = pattern.exec(result.output);
     summary[type] = match ? parseInt(match, 10) : 0;
 
     return summary;
-  }, res);
-}
+  }, result);
+
+const callbackify = (promise, done) =>
+  promise
+    .catch(err => {
+      if (typeof done === 'function') {
+        process.nextTick(() => {
+          done(err);
+        });
+      } else {
+        return Promise.reject(err);
+      }
+    })
+    .then(output => {
+      if (typeof done === 'function') {
+        process.nextTick(() => done(null, output));
+      }
+      return output;
+    });
+
+exports.runMocha = (...params) => {
+  const [file, args, opts, done] = parseParameters(...params);
+  args.reporter = args.reporter || 'spec';
+  return callbackify(run(file, args, opts).then(parseEpilog), done);
+};
+
+const parseJSON = result => {
+  const {code, args, execPath, opts} = result;
+  return Object.assign(JSON.parse(result.output), {code, args, execPath, opts});
+};
+
+exports.runMochaJSON = (file, args, done, opts) => {
+  [file, args, opts, done] = parseParameters(file, args, done, opts);
+  args.reporter = args.reporter || 'json';
+  return callbackify(run(file, args, opts).then(parseJSON), done);
+};
