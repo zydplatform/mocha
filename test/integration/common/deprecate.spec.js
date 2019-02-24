@@ -1,22 +1,23 @@
 'use strict';
 
-var run = require('../helpers').runMocha;
-var args = [];
+var runMocha = require('../helpers').runMocha;
 
 describe('utils.deprecate test', function() {
   it('should print unique deprecation only once', function(done) {
-    run(
+    runMocha(
       'deprecate.fixture.js',
-      args,
       function(err, res) {
         if (err) {
           return done(err);
         }
-        var result = res.output.match(/deprecated thing/g) || [];
-        expect(result, 'to have length', 2);
+        expect(
+          res,
+          'to have passed with output',
+          /(deprecated thing.*\n.*deprecated thing)/i
+        );
         done();
       },
-      {stdio: 'pipe'}
+      'pipe'
     );
   });
 });

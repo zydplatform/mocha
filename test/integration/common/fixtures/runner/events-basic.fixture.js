@@ -1,9 +1,7 @@
 'use strict';
-var Runner = require('../../../../lib/runner.js');
+var Runner = require('../../../../../lib/runner');
 var assert = require('assert');
 var constants = Runner.constants;
-var EVENT_DELAY_BEGIN = constants.EVENT_DELAY_BEGIN;
-var EVENT_DELAY_END = constants.EVENT_DELAY_END;
 var EVENT_HOOK_BEGIN = constants.EVENT_HOOK_BEGIN;
 var EVENT_HOOK_END = constants.EVENT_HOOK_END;
 var EVENT_RUN_BEGIN = constants.EVENT_RUN_BEGIN;
@@ -12,10 +10,7 @@ var EVENT_SUITE_BEGIN = constants.EVENT_SUITE_BEGIN;
 var EVENT_SUITE_END = constants.EVENT_SUITE_END;
 var EVENT_TEST_BEGIN = constants.EVENT_TEST_BEGIN;
 var EVENT_TEST_END = constants.EVENT_TEST_END;
-var EVENT_TEST_FAIL = constants.EVENT_TEST_FAIL;
 var EVENT_TEST_PASS = constants.EVENT_TEST_PASS;
-var EVENT_TEST_PENDING = constants.EVENT_TEST_PENDING;
-var EVENT_TEST_RETRY = constants.EVENT_TEST_RETRY;
 
 var emitOrder = [
   EVENT_RUN_BEGIN,

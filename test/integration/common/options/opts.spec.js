@@ -1,18 +1,12 @@
 'use strict';
 
-var path = require('path').posix;
-var helpers = require('../helpers');
+var helpers = require('../../helpers');
 var runMochaJSON = helpers.runMochaJSON;
-var invokeMocha = helpers.invokeMocha;
-var resolvePath = helpers.resolveFixturePath;
+var runMocha = helpers.runMocha;
 
 describe('--opts', function() {
-  var args = [];
-  var fixture = path.join('options', 'opts');
-
   it('should work despite nonexistent default options file', function(done) {
-    args = [];
-    runMochaJSON(fixture, args, function(err, res) {
+    runMochaJSON('opts', function(err, res) {
       if (err) {
         return done(err);
       }
@@ -25,19 +19,16 @@ describe('--opts', function() {
   it('should throw an error due to nonexistent options file', function(done) {
     var spawnOpts = {stdio: 'pipe'};
     var nonexistentFile = 'nosuchoptionsfile';
-    args = ['--opts', nonexistentFile, resolvePath(fixture)];
-    invokeMocha(
-      args,
+    runMocha(
+      'opts',
+      ['--opts', nonexistentFile],
       function(err, res) {
         if (err) {
           return done(err);
         }
 
         var pattern = 'unable to read ' + nonexistentFile;
-        expect(res, 'to satisfy', {
-          code: 1,
-          output: new RegExp(pattern, 'i')
-        });
+        expect(res, 'to have failed with output', new RegExp(pattern, 'i'));
         done();
       },
       spawnOpts

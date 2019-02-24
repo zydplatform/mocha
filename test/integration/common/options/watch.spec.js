@@ -1,6 +1,6 @@
 'use strict';
 
-var helpers = require('../helpers');
+var helpers = require('../../helpers');
 var runMochaJSONRaw = helpers.runMochaJSONRaw;
 
 describe('--watch', function() {

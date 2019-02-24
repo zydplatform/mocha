@@ -76,7 +76,8 @@ module.exports = {
             'test.node.qunit',
             'test.node.exports',
             'test.node.unit',
-            'test.node.integration',
+            'test.node.integration.specific',
+            'test.node.integration.common',
             'test.node.jsapi',
             'test.node.requires',
             'test.node.reporters',
@@ -113,12 +114,22 @@ module.exports = {
           description: 'Run Node.js unit tests'
         },
         integration: {
-          script: test(
-            'node.integration',
-            '--timeout 10000 --slow 3750 "test/integration/node/**/*.spec.js"'
-          ),
-          description: 'Run Node.js integration tests',
-          hiddenFromHelp: true
+          specific: {
+            script: test(
+              'node.integration.specific',
+              '--timeout 10000 --slow 3750 "test/integration/node/**/*.spec.js"'
+            ),
+            description: 'Run Node.js-specific integration tests',
+            hiddenFromHelp: true
+          },
+          common: {
+            script: test(
+              'node.integration.common',
+              '--timeout 10000 --slow 3750 "test/integration/common/**/*.spec.js"'
+            ),
+            description: 'Run common integration tests in Node.js',
+            hiddenFromHelp: true
+          }
         },
         opts: {
           script: test(

@@ -10,7 +10,7 @@ exports.mixinMochaAssertions = function(expect) {
           Object.prototype.toString.call(v) === '[object Object]' &&
           typeof v.output === 'string' &&
           'code' in v && // may be null
-          Array.isArray(v.args)
+          typeof v.command === 'string'
         );
       }
     })
@@ -168,20 +168,7 @@ exports.mixinMochaAssertions = function(expect) {
     .addAssertion(
       '<JSONRunResult> [not] to have failed with (error|errors) <any+>',
       function(expect, result, errors) {
-        Array.prototype.slice.call(arguments, 2).forEach(function(error) {
-          expect(result, '[not] to have failed').and('[not] to satisfy', {
-            failures: expect.it('to have an item satisfying', {
-              err: expect
-                .it('to satisfy', error)
-                .or('to satisfy', {message: error})
-            })
-          });
-        });
-      }
-    )
-    .addAssertion(
-      '<JSONRunResult> [not] to have (error|errors) <any+>',
-      function(expect, result, errors) {
+        expect(result, '[not] to have failed');
         Array.prototype.slice.call(arguments, 2).forEach(function(error) {
           expect(result, '[not] to satisfy', {
             failures: expect.it('to have an item satisfying', {
@@ -277,12 +264,6 @@ exports.mixinMochaAssertions = function(expect) {
       result
     ) {
       expect(result.stats.passes, '[not] to be greater than', 0);
-    })
-    .addAssertion('<JSONRunResult> [not] to have failed [tests]', function(
-      expect,
-      result
-    ) {
-      expect(result.stats.failed, '[not] to be greater than', 0);
     })
     .addAssertion('<JSONRunResult> [not] to have tests', function(
       expect,

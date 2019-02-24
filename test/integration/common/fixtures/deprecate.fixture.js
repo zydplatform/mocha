@@ -1,6 +1,6 @@
 'use strict';
 
-var utils = require("../../../lib/utils");
+var utils = require("../../../../lib/utils");
 
 it('consolidates identical calls to deprecate', function() {
   utils.deprecate("suite foo did a deprecated thing");

@@ -1,11 +1,10 @@
 'use strict';
 
-var helpers = require('../helpers');
-var invokeMocha = helpers.invokeMocha;
+var runMocha = require('../../helpers').runMocha;
 
 describe('--compilers', function() {
   it('should report deprecation', function(done) {
-    invokeMocha(
+    runMocha(
       ['--compilers', 'coffee:coffee-script/register'],
       function(err, res) {
         if (err) {

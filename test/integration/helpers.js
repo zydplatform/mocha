@@ -2,8 +2,12 @@
 
 const {unparse} = require('../../lib/cli/unparser');
 const {spawn} = require('cross-spawn');
-const {isNodeFlag} = require('../../lib/cli/node-flags');
+const {format} = require('util');
 const path = require('path');
+const {isNodeFlag} = require('../../lib/cli/node-flags');
+const debug = require('debug')('mocha:test');
+const Base = require('../../lib/reporters/base');
+const {hasMagic} = require('glob');
 
 const DEFAULT_FIXTURE = require.resolve(
   './common/fixtures/__default__.fixture.js'
@@ -15,20 +19,23 @@ const MOCHIFY_EXECUTABLE = require.resolve('mochify/bin/cmd.js');
 exports.constants = {
   MOCHA_EXECUTABLE,
   _MOCHA_EXECUTABLE,
-  MOCHIFY_EXECUTABLE
+  MOCHIFY_EXECUTABLE,
+  DEFAULT_FIXTURE
 };
 
-const resolveFixturePath = fixture => {
-  if (path.extname(fixture) !== '.js') {
-    fixture += '.fixture.js';
-  }
-  if (path.dirname(fixture) === '.') {
-    return path.join('test', 'integration', 'fixtures', fixture);
-  }
-  return fixture;
-};
-
-const hasNodeFlags = opts => Object.keys(opts).some(isNodeFlag);
+/**
+ * The apex of fixture resolution convenience
+ * @param {string} fixture - Name of fixture omitting `.fixture.js` extension, name of fixture with `.fixture.js` extension, absolute path to fixture, glob, or relative *from directory of test* to the fixture.
+ * @returns {string} If `fixture` was a glob or absolute, then `fixture`; otherwise the absolute path to the appropriate fixture.
+ */
+const resolveFixturePath = fixture =>
+  path.isAbsolute(fixture) || hasMagic(fixture)
+    ? fixture
+    : path.join(
+        path.dirname(module.parent.filename),
+        'fixtures',
+        !path.extname(fixture) ? `${fixture}.fixture.js` : fixture
+      );
 
 /**
  * Spawns Mocha in a subprocess and returns an object containing its output and exit code
@@ -37,14 +44,34 @@ const hasNodeFlags = opts => Object.keys(opts).some(isNodeFlag);
  * @returns {Promise<string>} Output
  * @ignore
  */
-const spawnAsync = (exports.spawnAsync = (args, opts) => {
+const spawnAsync = (exports.spawnAsync = (args, spawnOpts, killTimeout) => {
   return new Promise((resolve, reject) => {
     let output = '';
-    opts = Object.assign(
-      {stdio: ['ignore', 'pipe', 'ignore']},
-      opts === 'pipe' ? {stdio: 'pipe'} : opts
+    const env = Object.assign({}, process.env);
+    delete env.DEBUG;
+    spawnOpts = Object.assign(
+      {stdio: ['ignore', 'pipe', 'ignore'], env},
+      spawnOpts === 'pipe' ? {stdio: 'pipe'} : spawnOpts
     );
-    const proc = spawn(process.execPath, args, opts);
+    const proc = spawn(process.execPath, args, spawnOpts)
+      .on('error', reject)
+      .on('close', code => {
+        debug(`process #${proc.pid} closed`);
+        resolve({
+          output,
+          code,
+          command: [process.execPath].concat(args).join(' ')
+        });
+      });
+
+    if (killTimeout) {
+      debug(`killing process #${proc.pid} after ${killTimeout}ms`);
+      setTimeout(() => {
+        process.kill(proc.pid, 'SIGINT');
+        debug(`kill signal sent to process ${proc.pid}`);
+      }, killTimeout);
+    }
+
     const listener = data => {
       output += data;
     };
@@ -53,51 +80,58 @@ const spawnAsync = (exports.spawnAsync = (args, opts) => {
     if (proc.stderr) {
       proc.stderr.on('data', listener);
     }
-    proc.on('error', reject);
-
-    proc.on('close', code => {
-      resolve({
-        output: output,
-        code: code,
-        execPath: process.execPath,
-        args: args,
-        opts: opts
-      });
-    });
   });
 });
 
-const run = (file, args, opts) => {
+const run = (filepath, {nodeArgs = [], mochaArgs = []} = {}, opts = {}) => {
   let executable;
   if (process.env.BROWSER) {
     executable = MOCHIFY_EXECUTABLE;
-  } else if (hasNodeFlags(args)) {
+  } else if (nodeArgs.length) {
     executable = MOCHA_EXECUTABLE;
   } else {
     executable = _MOCHA_EXECUTABLE;
   }
-  const {nodeArgs, mochaArgs} = unparse(args);
-  return spawnAsync([executable].concat(nodeArgs, mochaArgs), opts);
+  return spawnAsync(
+    nodeArgs.concat(executable, mochaArgs, '-C', filepath),
+    opts
+  );
 };
 
-const parseParameters = (file, args, done, opts) => {
-  if (typeof file === 'object') {
-    done = opts;
-    opts = args;
-    args = file;
-    file = DEFAULT_FIXTURE;
+const parseParameters = (fixture, args, done, spawnOpts = {}) => {
+  if (typeof fixture === 'object') {
+    spawnOpts = done;
+    done = args;
+    args = fixture;
+    fixture = DEFAULT_FIXTURE;
   }
   if (typeof args === 'function') {
-    opts = done;
+    spawnOpts = done;
     done = args;
-    args = {};
+    args = [];
   }
   if (typeof done !== 'function') {
-    opts = done;
+    spawnOpts = done;
     done = null;
   }
-  args._ = [resolveFixturePath(file)];
-  return [file, args, opts, done];
+  const fixturePath = resolveFixturePath(fixture);
+  debug(`fixture "${fixture} resolved to ${fixturePath}`);
+
+  const commandArgs = Array.isArray(args)
+    ? args.reduce(
+        (acc, arg) => {
+          if (isNodeFlag(arg.replace(/^--?/, ''))) {
+            acc.nodeArgs.push(arg);
+          } else {
+            acc.mochaArgs.push(arg);
+          }
+          return acc;
+        },
+        {nodeArgs: [], mochaArgs: []}
+      )
+    : unparse(args);
+
+  return [fixturePath, commandArgs, spawnOpts, done];
 };
 
 const parseEpilog = result =>
@@ -108,6 +142,16 @@ const parseEpilog = result =>
 
     return summary;
   }, result);
+
+const parseJSON = result => {
+  const {code, args, execPath, opts, output} = result;
+  try {
+    return Object.assign(JSON.parse(output), {code, args, execPath, opts});
+  } catch (err) {
+    err.message += format('\n\nJSON run result:\n%O', result);
+    throw err;
+  }
+};
 
 const callbackify = (promise, done) =>
   promise
@@ -128,18 +172,25 @@ const callbackify = (promise, done) =>
     });
 
 exports.runMocha = (...params) => {
-  const [file, args, opts, done] = parseParameters(...params);
-  args.reporter = args.reporter || 'spec';
-  return callbackify(run(file, args, opts).then(parseEpilog), done);
+  const [fixturePath, args, opts, done] = parseParameters(...params);
+  return callbackify(run(fixturePath, args, opts).then(parseEpilog), done);
 };
 
-const parseJSON = result => {
-  const {code, args, execPath, opts} = result;
-  return Object.assign(JSON.parse(result.output), {code, args, execPath, opts});
+exports.runMochaJSON = (...params) => {
+  const [fixturePath, args, opts, done] = parseParameters(...params);
+  args.mochaArgs.push('--reporter', 'json');
+  return callbackify(run(fixturePath, args, opts).then(parseJSON), done);
 };
 
-exports.runMochaJSON = (file, args, done, opts) => {
-  [file, args, opts, done] = parseParameters(file, args, done, opts);
-  args.reporter = args.reporter || 'json';
-  return callbackify(run(file, args, opts).then(parseJSON), done);
-};
+/**
+ * regular expression used for splitting lines based on new line / dot symbol.
+ */
+exports.splitRegExp = new RegExp('[\\n' + Base.symbols.dot + ']+');
+
+/**
+ * Given a regexp-like string, escape it so it can be used with the `RegExp` constructor
+ * @param {string} str - string to be escaped
+ * @returns {string} Escaped string
+ */
+
+exports.escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string

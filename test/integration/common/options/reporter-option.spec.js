@@ -1,6 +1,6 @@
 'use strict';
 
-var runMocha = require('../helpers').runMocha;
+var runMocha = require('../../helpers').runMocha;
 var path = require('path');
 
 describe('--reporter-option', function() {

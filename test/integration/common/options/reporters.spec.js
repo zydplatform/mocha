@@ -1,9 +1,9 @@
 'use strict';
 
-var helpers = require('../helpers');
-var invokeMocha = helpers.invokeMocha;
+var helpers = require('../../helpers');
+var runMocha = helpers.runMocha;
 var escapeRegExp = helpers.escapeRegExp;
-var reporters = require('../../../lib/mocha').reporters;
+var reporters = require('../../../../lib/mocha').reporters;
 
 describe('--reporters', function() {
   it('should dump a list of all reporters with descriptions', function(done) {
@@ -21,7 +21,7 @@ describe('--reporters', function() {
         };
       });
 
-    invokeMocha(['--reporters'], function(err, result) {
+    runMocha(['--reporters'], function(err, result) {
       if (err) {
         return done(err);
       }

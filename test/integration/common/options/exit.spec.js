@@ -1,6 +1,6 @@
 'use strict';
 
-var helpers = require('../helpers');
+var helpers = require('../../helpers');
 var runMochaJSON = helpers.runMochaJSON;
 
 describe('--exit', function() {

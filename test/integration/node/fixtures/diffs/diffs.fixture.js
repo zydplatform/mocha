@@ -3,8 +3,9 @@
 // assert is used because unexpected doesn't use mocha's diffs.
 var assert = require('assert');
 var fs = require('fs');
-var cssin = fs.readFileSync('test/integration/fixtures/diffs/diffs.css.in', 'ascii');
-var cssout = fs.readFileSync('test/integration/fixtures/diffs/diffs.css.out', 'ascii');
+var path = require('path');
+var cssin = fs.readFileSync(path.join(__dirname, 'diffs.css.in'), 'ascii');
+var cssout = fs.readFileSync(path.join(__dirname, 'diffs.css.out'), 'ascii');
 
 describe('diffs', function () {
   var actual, expected;

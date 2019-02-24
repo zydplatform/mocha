@@ -1,8 +1,9 @@
 'use strict';
 
-var helpers = require('../_helpers');
-var invokeMocha = helpers.invokeMocha;
-var DEFAULT_FIXTURE = helpers.DEFAULT_FIXTURE;
+var helpers = require('../../helpers');
+var spawnAsync = helpers.spawnAsync;
+var DEFAULT_FIXTURE = helpers.constants.DEFAULT_FIXTURE;
+var MOCHA_EXECUTABLE = helpers.constants.MOCHA_EXECUTABLE;
 
 describe('--debug', function() {
   describe('Node.js v8+', function() {
@@ -12,68 +13,49 @@ describe('--debug', function() {
       }
     });
 
-    it('should invoke --inspect', function(done) {
-      invokeMocha(
-        ['--debug', DEFAULT_FIXTURE],
-        function(err, res) {
-          if (err) {
-            return done(err);
-          }
-          expect(res, 'to contain output', /Debugger listening/i);
-          done();
-        },
-        'pipe'
+    it('should invoke --inspect', function() {
+      return expect(
+        spawnAsync([MOCHA_EXECUTABLE, '--debug', DEFAULT_FIXTURE], 'pipe'),
+        'when fulfilled',
+        'to contain output',
+        /Debugger listening/i
       );
     });
 
-    it('should invoke --inspect-brk', function(done) {
-      var proc = invokeMocha(
-        ['--debug-brk', DEFAULT_FIXTURE],
-        function(err, res) {
-          if (err) {
-            return done(err);
-          }
-          expect(res, 'to contain output', /Debugger listening/i);
-          done();
-        },
-        'pipe'
-      );
-
-      // debugger must be manually killed
-      setTimeout(function() {
-        process.kill(proc.pid, 'SIGINT');
-      }, 2000);
-    });
-
-    it('should respect custom host/port', function(done) {
-      invokeMocha(
-        ['--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
-        function(err, res) {
-          if (err) {
-            return done(err);
-          }
-          expect(
-            res,
-            'to contain output',
-            /Debugger listening on .*127.0.0.1:9229/i
-          );
-          done();
-        },
-        'pipe'
+    it('should invoke --inspect-brk', function() {
+      return expect(
+        spawnAsync(
+          [MOCHA_EXECUTABLE, '--debug-brk', DEFAULT_FIXTURE],
+          'pipe',
+          2000
+        ),
+        'when fulfilled',
+        'to contain output',
+        /Debugger listening/i
       );
     });
 
-    it('should warn about incorrect usage for version', function(done) {
-      invokeMocha(
-        ['--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
-        function(err, res) {
-          if (err) {
-            return done(err);
-          }
-          expect(res, 'to contain output', /"--debug" is not available/i);
-          done();
-        },
-        'pipe'
+    it('should respect custom host/port', function() {
+      return expect(
+        spawnAsync(
+          [MOCHA_EXECUTABLE, '--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
+          'pipe'
+        ),
+        'when fulfilled',
+        'to contain output',
+        /Debugger listening on .*127.0.0.1:9229/i
+      );
+    });
+
+    it('should warn about incorrect usage for version', function() {
+      return expect(
+        spawnAsync(
+          [MOCHA_EXECUTABLE, '--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
+          'pipe'
+        ),
+        'when fulfilled',
+        'to contain output',
+        /"--debug" is not available/i
       );
     });
   });
@@ -86,45 +68,30 @@ describe('--debug', function() {
       }
     });
 
-    it('should start debugger', function(done) {
-      var proc = invokeMocha(
-        ['--debug', DEFAULT_FIXTURE],
-        function(err, res) {
-          if (err) {
-            return done(err);
-          }
-          expect(res, 'to contain output', /Debugger listening/i);
-          done();
-        },
-        'pipe'
+    it('should start debugger', function() {
+      return expect(
+        spawnAsync(
+          [MOCHA_EXECUTABLE, '--debug', DEFAULT_FIXTURE],
+          'pipe',
+          2000
+        ),
+        'when fulfilled',
+        'to contain output',
+        /Debugger listening/i
       );
-
-      // debugger must be manually killed
-      setTimeout(function() {
-        process.kill(proc.pid, 'SIGINT');
-      }, 2000);
     });
 
-    it('should respect custom host/port', function(done) {
-      var proc = invokeMocha(
-        ['--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
-        function(err, res) {
-          if (err) {
-            return done(err);
-          }
-          expect(
-            res,
-            'to contain output',
-            /Debugger listening on .*127.0.0.1:9229/i
-          );
-          done();
-        },
-        'pipe'
+    it('should respect custom host/port', function() {
+      return expect(
+        spawnAsync(
+          [MOCHA_EXECUTABLE, '--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
+          'pipe',
+          2000
+        ),
+        'when fulfilled',
+        'to contain output',
+        /Debugger listening on .*127.0.0.1:9229/i
       );
-
-      setTimeout(function() {
-        process.kill(proc.pid, 'SIGINT');
-      }, 2000);
     });
   });
 });

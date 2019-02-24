@@ -1,6 +1,6 @@
 'use strict';
 
-var helpers = require('../helpers');
+var helpers = require('../../helpers');
 var runMocha = helpers.runMocha;
 
 describe('--ui', function() {

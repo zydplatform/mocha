@@ -1,17 +1,16 @@
 'use strict';
 
-var invokeMocha = require('../helpers').invokeMocha;
+var runMocha = require('../helpers').runMocha;
 
 describe('invalid arguments', function() {
   it('should exit with failure if arguments are invalid', function(done) {
-    invokeMocha(
-      ['--ui'],
+    runMocha(
+      ['--grep'],
       function(err, result) {
         if (err) {
           return done(err);
         }
-        expect(result, 'to have failed');
-        expect(result.output, 'to match', /not enough arguments/i);
+        expect(result, 'to have failed having output', /not enough arguments/i);
         done();
       },
       {stdio: 'pipe'}

@@ -1,7 +1,7 @@
 'use strict';
 
 var path = require('path').posix;
-var helpers = require('../helpers');
+var helpers = require('../../helpers');
 var runMocha = helpers.runMocha;
 var runMochaJSON = helpers.runMochaJSON;
 
