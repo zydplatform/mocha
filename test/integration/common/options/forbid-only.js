@@ -1,6 +1,5 @@
 'use strict';
 
-var path = require('path').posix;
 var helpers = require('../../helpers');
 var runMocha = helpers.runMocha;
 var runMochaJSON = helpers.runMochaJSON;
@@ -14,8 +13,7 @@ describe('--forbid-only', function() {
   });
 
   it('should succeed if there are only passed tests', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'passed');
-    runMochaJSON(fixture, args, function(err, res) {
+    runMochaJSON('forbid-only/passed', args, function(err, res) {
       if (err) {
         return done(err);
       }
@@ -25,8 +23,7 @@ describe('--forbid-only', function() {
   });
 
   it('should fail if there are tests marked only', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'only');
-    runMochaJSON(fixture, args, function(err, res) {
+    runMochaJSON('forbid-only/only', args, function(err, res) {
       if (err) {
         return done(err);
       }
@@ -36,10 +33,9 @@ describe('--forbid-only', function() {
   });
 
   it('should fail if there are tests in suites marked only', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'only-suite');
     var spawnOpts = {stdio: 'pipe'};
     runMocha(
-      fixture,
+      'forbid-only/only-suite',
       args,
       function(err, res) {
         if (err) {
@@ -57,10 +53,9 @@ describe('--forbid-only', function() {
   });
 
   it('should fail if there is empty suite marked only', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'only-empty-suite');
     var spawnOpts = {stdio: 'pipe'};
     runMocha(
-      fixture,
+      'forbid-only/only-empty-suite',
       args,
       function(err, res) {
         if (err) {
@@ -77,10 +72,9 @@ describe('--forbid-only', function() {
   });
 
   it('should fail if there is suite marked only which matches grep', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'only-suite');
     var spawnOpts = {stdio: 'pipe'};
     runMocha(
-      fixture,
+      'forbid-only/only-suite',
       args.concat('--fgrep', 'suite marked with only'),
       function(err, res) {
         if (err) {
@@ -97,23 +91,22 @@ describe('--forbid-only', function() {
   });
 
   it('should succeed if suite marked only does not match grep', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'only-suite');
-    runMochaJSON(fixture, args.concat('--fgrep', 'bumble bees'), function(
-      err,
-      res
-    ) {
-      if (err) {
-        return done(err);
+    runMochaJSON(
+      'forbid-only/only-suite',
+      args.concat('--fgrep', 'bumble bees'),
+      function(err, res) {
+        if (err) {
+          return done(err);
+        }
+        expect(res, 'to have passed');
+        done();
       }
-      expect(res, 'to have passed');
-      done();
-    });
+    );
   });
 
   it('should succeed if suite marked only does not match inverted grep', function(done) {
-    var fixture = path.join('options', 'forbid-only', 'only-suite');
     runMochaJSON(
-      fixture,
+      'forbid-only/only-suite',
       args.concat('--fgrep', 'suite marked with only', '--invert'),
       function(err, res) {
         if (err) {

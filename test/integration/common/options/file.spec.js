@@ -1,20 +1,19 @@
 'use strict';
 
-var path = require('path').posix;
 var helpers = require('../../helpers');
 var runMochaJSON = helpers.runMochaJSON;
-var resolvePath = helpers.resolveFixturePath;
+var resolveFixture = helpers.resolveFixture;
 
 describe('--file', function() {
   var args = [];
   var fixtures = {
-    alpha: path.join('options', 'file-alpha'),
-    beta: path.join('options', 'file-beta'),
-    theta: path.join('options', 'file-theta')
+    alpha: 'file-alpha',
+    beta: 'file-beta',
+    theta: 'file-theta'
   };
 
   it('should run tests passed via file first', function(done) {
-    args = ['--file', resolvePath(fixtures.alpha)];
+    args = ['--file', resolveFixture(fixtures.alpha)];
 
     var fixture = fixtures.beta;
     runMochaJSON(fixture, args, function(err, res) {
@@ -31,9 +30,9 @@ describe('--file', function() {
   it('should run multiple tests passed via file first', function(done) {
     args = [
       '--file',
-      resolvePath(fixtures.alpha),
+      resolveFixture(fixtures.alpha),
       '--file',
-      resolvePath(fixtures.beta)
+      resolveFixture(fixtures.beta)
     ];
 
     var fixture = fixtures.theta;

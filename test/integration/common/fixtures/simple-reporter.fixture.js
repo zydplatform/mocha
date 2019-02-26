@@ -1,6 +1,6 @@
 'use strict';
 
-const Mocha = require('../../..');
+const Mocha = require('../../../../');
 const {
   EVENT_RUN_BEGIN,
   EVENT_RUN_END,

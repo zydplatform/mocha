@@ -1,9 +1,7 @@
 'use strict';
 
 var helpers = require('../../helpers');
-var spawnAsync = helpers.spawnAsync;
-var DEFAULT_FIXTURE = helpers.constants.DEFAULT_FIXTURE;
-var MOCHA_EXECUTABLE = helpers.constants.MOCHA_EXECUTABLE;
+var runMocha = helpers.runMocha;
 
 describe('--debug', function() {
   describe('Node.js v8+', function() {
@@ -15,7 +13,7 @@ describe('--debug', function() {
 
     it('should invoke --inspect', function() {
       return expect(
-        spawnAsync([MOCHA_EXECUTABLE, '--debug', DEFAULT_FIXTURE], 'pipe'),
+        runMocha(['--debug'], {stdio: 'pipe'}),
         'when fulfilled',
         'to contain output',
         /Debugger listening/i
@@ -24,11 +22,7 @@ describe('--debug', function() {
 
     it('should invoke --inspect-brk', function() {
       return expect(
-        spawnAsync(
-          [MOCHA_EXECUTABLE, '--debug-brk', DEFAULT_FIXTURE],
-          'pipe',
-          2000
-        ),
+        runMocha(['--debug-brk'], {stdio: 'pipe', killTimeout: 2000}),
         'when fulfilled',
         'to contain output',
         /Debugger listening/i
@@ -37,10 +31,7 @@ describe('--debug', function() {
 
     it('should respect custom host/port', function() {
       return expect(
-        spawnAsync(
-          [MOCHA_EXECUTABLE, '--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
-          'pipe'
-        ),
+        runMocha(['--debug=127.0.0.1:9229'], {stdio: 'pipe'}),
         'when fulfilled',
         'to contain output',
         /Debugger listening on .*127.0.0.1:9229/i
@@ -49,10 +40,7 @@ describe('--debug', function() {
 
     it('should warn about incorrect usage for version', function() {
       return expect(
-        spawnAsync(
-          [MOCHA_EXECUTABLE, '--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
-          'pipe'
-        ),
+        runMocha(['--debug=127.0.0.1:9229'], {stdio: 'pipe'}),
         'when fulfilled',
         'to contain output',
         /"--debug" is not available/i
@@ -70,11 +58,7 @@ describe('--debug', function() {
 
     it('should start debugger', function() {
       return expect(
-        spawnAsync(
-          [MOCHA_EXECUTABLE, '--debug', DEFAULT_FIXTURE],
-          'pipe',
-          2000
-        ),
+        runMocha(['--debug'], {stdio: 'pipe', killTimeout: 2000}),
         'when fulfilled',
         'to contain output',
         /Debugger listening/i
@@ -83,11 +67,10 @@ describe('--debug', function() {
 
     it('should respect custom host/port', function() {
       return expect(
-        spawnAsync(
-          [MOCHA_EXECUTABLE, '--debug=127.0.0.1:9229', DEFAULT_FIXTURE],
-          'pipe',
-          2000
-        ),
+        runMocha(['--debug=127.0.0.1:9229'], {
+          stdio: 'pipe',
+          killTimeout: 2000
+        }),
         'when fulfilled',
         'to contain output',
         /Debugger listening on .*127.0.0.1:9229/i

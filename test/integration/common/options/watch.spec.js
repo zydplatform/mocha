@@ -1,7 +1,7 @@
 'use strict';
 
 var helpers = require('../../helpers');
-var runMochaJSONRaw = helpers.runMochaJSONRaw;
+var runMocha = helpers.runMocha;
 
 describe('--watch', function() {
   var args = [];
@@ -23,9 +23,9 @@ describe('--watch', function() {
       this.timeout(0);
       this.slow(3000);
 
-      var fixture = 'exit.fixture.js';
-      var spawnOpts = {stdio: 'pipe'};
-      var mocha = runMochaJSONRaw(
+      var fixture = 'exit';
+      var spawnOpts = {stdio: 'pipe', killTimeout: 1000};
+      runMocha(
         fixture,
         args,
         function postmortem(err, data) {
@@ -46,11 +46,6 @@ describe('--watch', function() {
         },
         spawnOpts
       );
-
-      setTimeout(function() {
-        // Kill the child process
-        mocha.kill('SIGINT');
-      }, 1000);
     });
   });
 });

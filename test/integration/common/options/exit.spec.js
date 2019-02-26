@@ -1,7 +1,6 @@
 'use strict';
 
-var helpers = require('../../helpers');
-var runMochaJSON = helpers.runMochaJSON;
+var runMocha = require('../../helpers').runMocha;
 
 describe('--exit', function() {
   var behaviors = {
@@ -15,7 +14,7 @@ describe('--exit', function() {
    *
    * @param {boolean} shouldExit - Expected result; `true` if Mocha should
    *   have force-killed the process.
-   * @param {string} [behavior] - 'enabled' or 'disabled'
+   * @param {string} [behavior] - 'enabled' or 'disabled'; omit for default
    * @returns {Function} async function implementing the test
    */
   var runExit = function(shouldExit, behavior) {
@@ -23,28 +22,22 @@ describe('--exit', function() {
       var timeout = this.timeout();
       this.timeout(0);
       this.slow(Infinity);
-
-      var didExit = true;
-      var timeoutObj;
-      var fixture = 'exit.fixture.js';
       var args = behaviors[behavior] ? [behaviors[behavior]] : [];
 
-      var mocha = runMochaJSON(fixture, args, function postmortem(err) {
-        clearTimeout(timeoutObj);
-        if (err) {
-          return done(err);
-        }
-        expect(didExit, 'to be', shouldExit);
-        done();
-      });
-
-      // If this callback happens, then Mocha didn't automatically exit.
-      timeoutObj = setTimeout(function() {
-        didExit = false;
-        // This is the only way to kill the child, afaik.
-        // After the process ends, the callback to `run()` above is handled.
-        mocha.kill('SIGINT');
-      }, timeout - 500);
+      runMocha(
+        'exit',
+        args,
+        function postmortem(err, res) {
+          if (err) {
+            return done(err);
+          }
+          expect(res, 'to satisfy', {
+            signal: shouldExit ? null : 'SIGINT'
+          });
+          done();
+        },
+        {killTimeout: timeout - 500}
+      );
     };
   };
 

@@ -3,7 +3,8 @@
 var path = require('path').posix;
 var helpers = require('../../helpers');
 var runMochaJSON = helpers.runMochaJSON;
-var resolvePath = helpers.resolveFixturePath;
+
+var BASE_FIXTURE_PATH = path.join(__dirname, 'fixtures', 'exclude');
 
 describe('--exclude', function() {
   /*
@@ -27,10 +28,10 @@ describe('--exclude', function() {
   }
 
   it('should exclude specific files', function(done) {
-    var fixtures = path.join('options', 'exclude', '*');
+    var fixtures = path.join(BASE_FIXTURE_PATH, '*.fixture.js');
     runMochaTest(
       fixtures,
-      ['--exclude', resolvePath(path.join('options', 'exclude', 'fail'))],
+      ['--exclude', path.join(BASE_FIXTURE_PATH, 'fail.fixture.js')],
       function(res) {
         expect(res, 'to have passed')
           .and('to have run test', 'should find this test')
@@ -41,7 +42,7 @@ describe('--exclude', function() {
   });
 
   it('should exclude globbed files', function(done) {
-    var fixtures = path.join('options', 'exclude', '**', '*');
+    var fixtures = path.join(BASE_FIXTURE_PATH, '**', '*.fixture.js');
     runMochaTest(
       fixtures,
       ['--exclude', '**/fail.fixture.js'],
@@ -55,14 +56,14 @@ describe('--exclude', function() {
   });
 
   it('should exclude multiple patterns', function(done) {
-    var fixtures = path.join('options', 'exclude', '**', '*');
+    var fixtures = path.join(BASE_FIXTURE_PATH, '**', '*.fixture.js');
     runMochaTest(
       fixtures,
       [
         '--exclude',
-        resolvePath(path.join('options', 'exclude', 'fail')),
+        path.join(BASE_FIXTURE_PATH, 'fail.fixture.js'),
         '--exclude',
-        resolvePath(path.join('options', 'exclude', 'nested', 'fail'))
+        path.join(BASE_FIXTURE_PATH, 'nested', 'fail.fixture.js')
       ],
       function(res) {
         expect(res, 'to have passed')

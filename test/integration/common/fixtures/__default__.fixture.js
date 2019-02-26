@@ -1,9 +1,14 @@
-// this generic fixture does nothing special and will be used if no fixture is supplied
+// this generic fixture will be used if no fixture is supplied
 
 'use strict';
 
-describe('a suite', function() {
-  it('should succeed', function(done) {
-    done();
+var assert = require('assert');
+
+describe('suite', function() {
+  it('test1', function() {
+    assert(true);
+  });
+  it('test2', function() {
+    assert(true);
   });
 });

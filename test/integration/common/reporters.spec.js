@@ -13,10 +13,7 @@ describe('reporters', function() {
     var res;
 
     before(function(done) {
-      run('passing.fixture.js', ['--reporter', 'markdown'], function(
-        err,
-        result
-      ) {
+      run(['--reporter', 'markdown'], function(err, result) {
         res = result;
         done(err);
       });
@@ -50,7 +47,7 @@ describe('reporters', function() {
         '</testsuite>'
       ];
 
-      run('passing.fixture.js', args, function(err, result) {
+      run(args, function(err, result) {
         if (err) return done(err);
 
         var xml = fs.readFileSync(tmpFile, 'utf8');
@@ -68,11 +65,11 @@ describe('reporters', function() {
   describe('loader', function() {
     it('loads a reporter from a path relative to the current working directory', function(done) {
       var reporterAtARelativePath =
-        'test/integration/fixtures/simple-reporter.js';
+        'test/integration/common/fixtures/simple-reporter.fixture.js';
 
       var args = ['--reporter=' + reporterAtARelativePath];
 
-      run('passing.fixture.js', args, function(err, result) {
+      run(args, function(err, result) {
         if (err) {
           done(err);
           return;
@@ -84,14 +81,13 @@ describe('reporters', function() {
 
     it('loads a reporter from an absolute path', function(done) {
       // Generates an absolute path string
-      var reporterAtAnAbsolutePath = path.join(
-        process.cwd(),
-        'test/integration/fixtures/simple-reporter.js'
+      var reporterAtAnAbsolutePath = require.resolve(
+        './fixtures/simple-reporter.fixture.js'
       );
 
       var args = ['--reporter=' + reporterAtAnAbsolutePath];
 
-      run('passing.fixture.js', args, function(err, result) {
+      run(args, function(err, result) {
         if (err) {
           done(err);
           return;
@@ -190,10 +186,10 @@ describe('reporters', function() {
         });
       };
 
-      runFixtureAndValidateOutput('passing.fixture.js', {
+      runFixtureAndValidateOutput('__default__', {
         numTests: 2
       });
-      runFixtureAndValidateOutput('reporters.fixture.js', {
+      runFixtureAndValidateOutput('reporters', {
         numTests: 12
       });
     });
@@ -207,7 +203,7 @@ describe('reporters', function() {
       ];
 
       run(
-        'reporters.fixture.js',
+        'reporters',
         args,
         function(err, res) {
           if (err) {
@@ -231,7 +227,7 @@ describe('reporters', function() {
     it('places exceptions correctly in YAML blocks', function(done) {
       var args = ['--reporter=tap', '--reporter-option', 'tapVersion=13'];
 
-      run('reporters.fixture.js', args, function(err, res) {
+      run('reporters', args, function(err, res) {
         if (err) {
           done(err);
           return;

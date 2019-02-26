@@ -67,7 +67,7 @@ exports.mixinMochaAssertions = function(expect) {
     .addAssertion(
       '<JSONRunResult> [not] to have passed (with|having) count <number>',
       function(expect, result, count) {
-        expect(result, '[not] to pass').and('[not] to satisfy', {
+        expect(result, '[not] to have passed').and('[not] to satisfy', {
           stats: {passes: expect.it('to be', count)}
         });
       }

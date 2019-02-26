@@ -12,8 +12,10 @@ describe('--sort', function() {
   });
 
   it('should sort tests in alphabetical order', function(done) {
-    var fixtures = path.join('options', 'sort*');
-    runMochaJSON(fixtures, args, function(err, res) {
+    runMochaJSON(path.join(__dirname, 'fixtures', 'sort*'), args, function(
+      err,
+      res
+    ) {
       if (err) {
         done(err);
         return;

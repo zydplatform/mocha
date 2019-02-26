@@ -7,7 +7,7 @@ const path = require('path');
 const {isNodeFlag} = require('../../lib/cli/node-flags');
 const debug = require('debug')('mocha:test');
 const Base = require('../../lib/reporters/base');
-const {hasMagic} = require('glob');
+const glob = require('glob');
 
 const DEFAULT_FIXTURE = require.resolve(
   './common/fixtures/__default__.fixture.js'
@@ -24,52 +24,97 @@ exports.constants = {
 };
 
 /**
+ * Fixtures live here and that's where we'll look for them.
+ */
+const FIXTURE_PATHS = glob.sync('**/fixtures/', {
+  cwd: __dirname,
+  absolute: true
+});
+
+/**
+ * Ensure `DEBUG` is not passed to child processes.
+ * (alternatively, we could redirect debug to some other stream?)
+ */
+const DEFAULT_SPAWN_OPTS = {
+  stdio: ['ignore', 'pipe', 'ignore'],
+  env: Object.assign({}, process.env, {DEBUG: undefined})
+};
+
+/**
  * The apex of fixture resolution convenience
  * @param {string} fixture - Name of fixture omitting `.fixture.js` extension, name of fixture with `.fixture.js` extension, absolute path to fixture, glob, or relative *from directory of test* to the fixture.
  * @returns {string} If `fixture` was a glob or absolute, then `fixture`; otherwise the absolute path to the appropriate fixture.
  */
-const resolveFixturePath = fixture =>
-  path.isAbsolute(fixture) || hasMagic(fixture)
+const resolveFixture = (exports.resolveFixture = fixture => {
+  const resolved = resolveFixture.cache.get(fixture);
+  if (resolved) {
+    return resolved;
+  }
+  if (path.isAbsolute(fixture) || glob.hasMagic(fixture)) {
+    resolveFixture.cache.set(fixture, fixture);
+    return fixture;
+  }
+  const baseFilepath = path.extname(fixture)
     ? fixture
-    : path.join(
-        path.dirname(module.parent.filename),
-        'fixtures',
-        !path.extname(fixture) ? `${fixture}.fixture.js` : fixture
-      );
+    : `${fixture}.fixture.js`;
+  let filepath;
+  try {
+    filepath = require.resolve(baseFilepath, {paths: FIXTURE_PATHS});
+    resolveFixture.cache.set(fixture, filepath);
+    debug(`fixture "${fixture} resolved to ${filepath}`);
+    return filepath;
+  } catch (err) {
+    throw new Error(
+      `Could not find fixture "${fixture}" anywhere in ${FIXTURE_PATHS}`
+    );
+  }
+});
+
+resolveFixture.cache = new Map();
 
 /**
  * Spawns Mocha in a subprocess and returns an object containing its output and exit code
  *
  * @param {string[]} args - Path to executable and arguments
- * @returns {Promise<string>} Output
+ * @param {Object|string} [opts] - Various options or 'pipe'
+ * @param {number} [opts.killTimeout] - Kill child process after *n* ms
+ * @param {string|string[]} [opts.stdio] - `stdio` option for `child_process.spawn()`
+ * @returns {Promise<{{output: string, code: number, signal: string, command: string}}>} Output
  * @ignore
  */
-const spawnAsync = (exports.spawnAsync = (args, spawnOpts, killTimeout) => {
+const spawnAsync = (exports.spawnAsync = (args, opts = {}) => {
   return new Promise((resolve, reject) => {
     let output = '';
-    const env = Object.assign({}, process.env);
-    delete env.DEBUG;
-    spawnOpts = Object.assign(
-      {stdio: ['ignore', 'pipe', 'ignore'], env},
-      spawnOpts === 'pipe' ? {stdio: 'pipe'} : spawnOpts
-    );
+    const spawnOpts = Object.assign({}, DEFAULT_SPAWN_OPTS);
+    let t;
+    if (opts === 'pipe') {
+      spawnOpts.stdio = 'pipe';
+    } else if (opts.stdio) {
+      spawnOpts.stdio = opts.stdio;
+    }
     const proc = spawn(process.execPath, args, spawnOpts)
-      .on('error', reject)
-      .on('close', code => {
+      .on('error', err => {
+        clearTimeout(t);
+        reject(err);
+      })
+      .on('close', (code, signal) => {
+        clearTimeout(t);
         debug(`process #${proc.pid} closed`);
         resolve({
           output,
           code,
+          signal,
           command: [process.execPath].concat(args).join(' ')
         });
       });
+    debug(`process #${proc.pid} opened`);
 
-    if (killTimeout) {
-      debug(`killing process #${proc.pid} after ${killTimeout}ms`);
-      setTimeout(() => {
+    if (opts.killTimeout) {
+      debug(`will kill process #${proc.pid} after ${opts.killTimeout} ms`);
+      t = setTimeout(() => {
         process.kill(proc.pid, 'SIGINT');
         debug(`kill signal sent to process ${proc.pid}`);
-      }, killTimeout);
+      }, opts.killTimeout);
     }
 
     const listener = data => {
@@ -93,7 +138,7 @@ const run = (filepath, {nodeArgs = [], mochaArgs = []} = {}, opts = {}) => {
     executable = _MOCHA_EXECUTABLE;
   }
   return spawnAsync(
-    nodeArgs.concat(executable, mochaArgs, '-C', filepath),
+    [executable].concat(nodeArgs, mochaArgs, '-C', filepath),
     opts
   );
 };
@@ -114,13 +159,12 @@ const parseParameters = (fixture, args, done, spawnOpts = {}) => {
     spawnOpts = done;
     done = null;
   }
-  const fixturePath = resolveFixturePath(fixture);
-  debug(`fixture "${fixture} resolved to ${fixturePath}`);
+  const fixturePath = resolveFixture(fixture);
 
   const commandArgs = Array.isArray(args)
     ? args.reduce(
         (acc, arg) => {
-          if (isNodeFlag(arg.replace(/^--?/, ''))) {
+          if (isNodeFlag(arg.split('=')[0], false)) {
             acc.nodeArgs.push(arg);
           } else {
             acc.mochaArgs.push(arg);
