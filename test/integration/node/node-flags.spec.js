@@ -1,10 +1,10 @@
 'use strict';
 
-var invokeMocha = require('../helpers').invokeMocha;
+var runMocha = require('../helpers').runMocha;
 
 describe('node flags', function() {
   it('should not consider argument values to be node flags', function(done) {
-    invokeMocha(
+    runMocha(
       ['--require', 'trace-dependency'],
       function(err, res) {
         if (err) {
@@ -13,7 +13,7 @@ describe('node flags', function() {
         expect(res, 'not to have failed with output', /bad option/i);
         done();
       },
-      'pipe'
+      {stdio: 'pipe', wrap: true}
     );
   });
 });

@@ -21,6 +21,12 @@ describe('event order', function() {
   });
 
   describe('--bail test case', function() {
+    before(function() {
+      if (process.env.BROWSER) {
+        this.skip();
+      }
+    });
+
     it('should assert --bail event order', function(done) {
       runMochaJSON('runner/events-bail.fixture.js', ['--bail'], function(
         err,
@@ -39,6 +45,12 @@ describe('event order', function() {
   });
 
   describe('--retries test case', function() {
+    before(function() {
+      if (process.env.BROWSER) {
+        this.skip();
+      }
+    });
+
     it('should assert --retries event order', function(done) {
       runMochaJSON(
         'runner/events-retries.fixture.js',
@@ -58,6 +70,12 @@ describe('event order', function() {
   });
 
   describe('--delay test case', function() {
+    before(function() {
+      if (process.env.BROWSER) {
+        this.skip();
+      }
+    });
+
     it('should assert --delay event order', function(done) {
       runMochaJSON('runner/events-delay.fixture.js', ['--delay'], function(
         err,
@@ -77,6 +95,12 @@ describe('event order', function() {
   });
 
   describe('--retries and --bail test case', function() {
+    before(function() {
+      if (process.env.BROWSER) {
+        this.skip();
+      }
+    });
+
     it('should assert --retries event order', function(done) {
       runMochaJSON(
         'runner/events-bail-retries.fixture.js',

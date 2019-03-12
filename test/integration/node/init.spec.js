@@ -2,8 +2,7 @@
 
 var fs = require('fs');
 var rimraf = require('rimraf');
-var spawnAsync = require('../helpers').spawnAsync;
-var _MOCHA_EXECUTABLE = require('../helpers').constants._MOCHA_EXECUTABLE;
+var runMocha = require('../helpers').runMocha;
 var path = require('path');
 var os = require('os');
 
@@ -26,7 +25,7 @@ describe('init command', function() {
 
   it('should break if no path supplied', function() {
     return expect(
-      spawnAsync([_MOCHA_EXECUTABLE, 'init'], 'pipe'),
+      runMocha(['init'], {stdio: 'pipe', exactArgs: true}),
       'when fulfilled',
       expect.it(
         'to have failed with output',
@@ -37,7 +36,7 @@ describe('init command', function() {
 
   it('should create some files in the dest dir', function() {
     return expect(
-      spawnAsync([_MOCHA_EXECUTABLE, 'init', tmpdir], 'pipe'),
+      runMocha(['init', tmpdir], {stdio: 'pipe', exactArgs: true}),
       'when fulfilled',
       expect.it('to have passed')
     ).then(function() {

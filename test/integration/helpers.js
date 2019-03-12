@@ -1,25 +1,21 @@
 'use strict';
 
 const {unparse} = require('../../lib/cli/unparser');
-const {spawn} = require('cross-spawn');
 const {format} = require('util');
 const path = require('path');
 const {isNodeFlag} = require('../../lib/cli/node-flags');
 const debug = require('debug')('mocha:test');
 const Base = require('../../lib/reporters/base');
 const glob = require('glob');
+const {run} = process.env.BROWSER
+  ? require('./browser-runner')
+  : require('./node-runner');
 
 const DEFAULT_FIXTURE = require.resolve(
   './common/fixtures/__default__.fixture.js'
 );
-const MOCHA_EXECUTABLE = require.resolve('../../bin/mocha');
-const _MOCHA_EXECUTABLE = require.resolve('../../bin/_mocha');
-const MOCHIFY_EXECUTABLE = require.resolve('mochify/bin/cmd.js');
 
 exports.constants = {
-  MOCHA_EXECUTABLE,
-  _MOCHA_EXECUTABLE,
-  MOCHIFY_EXECUTABLE,
   DEFAULT_FIXTURE
 };
 
@@ -30,15 +26,6 @@ const FIXTURE_PATHS = glob.sync('**/fixtures/', {
   cwd: __dirname,
   absolute: true
 });
-
-/**
- * Ensure `DEBUG` is not passed to child processes.
- * (alternatively, we could redirect debug to some other stream?)
- */
-const DEFAULT_SPAWN_OPTS = {
-  stdio: ['ignore', 'pipe', 'ignore'],
-  env: Object.assign({}, process.env, {DEBUG: undefined})
-};
 
 /**
  * The apex of fixture resolution convenience
@@ -72,93 +59,23 @@ const resolveFixture = (exports.resolveFixture = fixture => {
 
 resolveFixture.cache = new Map();
 
-/**
- * Spawns Mocha in a subprocess and returns an object containing its output and exit code
- *
- * @param {string[]} args - Path to executable and arguments
- * @param {Object|string} [opts] - Various options or 'pipe'
- * @param {number} [opts.killTimeout] - Kill child process after *n* ms
- * @param {string|string[]} [opts.stdio] - `stdio` option for `child_process.spawn()`
- * @returns {Promise<{{output: string, code: number, signal: string, command: string}}>} Output
- * @ignore
- */
-const spawnAsync = (exports.spawnAsync = (args, opts = {}) => {
-  return new Promise((resolve, reject) => {
-    let output = '';
-    const spawnOpts = Object.assign({}, DEFAULT_SPAWN_OPTS);
-    let t;
-    if (opts === 'pipe') {
-      spawnOpts.stdio = 'pipe';
-    } else if (opts.stdio) {
-      spawnOpts.stdio = opts.stdio;
-    }
-    const proc = spawn(process.execPath, args, spawnOpts)
-      .on('error', err => {
-        clearTimeout(t);
-        reject(err);
-      })
-      .on('close', (code, signal) => {
-        clearTimeout(t);
-        debug(`process #${proc.pid} closed`);
-        resolve({
-          output,
-          code,
-          signal,
-          command: [process.execPath].concat(args).join(' ')
-        });
-      });
-    debug(`process #${proc.pid} opened`);
-
-    if (opts.killTimeout) {
-      debug(`will kill process #${proc.pid} after ${opts.killTimeout} ms`);
-      t = setTimeout(() => {
-        process.kill(proc.pid, 'SIGINT');
-        debug(`kill signal sent to process ${proc.pid}`);
-      }, opts.killTimeout);
-    }
-
-    const listener = data => {
-      output += data;
-    };
-
-    proc.stdout.on('data', listener);
-    if (proc.stderr) {
-      proc.stderr.on('data', listener);
-    }
-  });
-});
-
-const run = (filepath, {nodeArgs = [], mochaArgs = []} = {}, opts = {}) => {
-  let executable;
-  if (process.env.BROWSER) {
-    executable = MOCHIFY_EXECUTABLE;
-  } else if (nodeArgs.length) {
-    executable = MOCHA_EXECUTABLE;
-  } else {
-    executable = _MOCHA_EXECUTABLE;
-  }
-  return spawnAsync(
-    [executable].concat(nodeArgs, mochaArgs, '-C', filepath),
-    opts
-  );
-};
-
-const parseParameters = (fixture, args, done, spawnOpts = {}) => {
+const parseParameters = (fixture, args, done, opts = {}) => {
   if (typeof fixture === 'object') {
-    spawnOpts = done;
+    opts = done;
     done = args;
     args = fixture;
     fixture = DEFAULT_FIXTURE;
   }
   if (typeof args === 'function') {
-    spawnOpts = done;
+    opts = done;
     done = args;
     args = [];
   }
   if (typeof done !== 'function') {
-    spawnOpts = done;
+    opts = done;
     done = null;
   }
+
   const fixturePath = resolveFixture(fixture);
 
   const commandArgs = Array.isArray(args)
@@ -175,7 +92,7 @@ const parseParameters = (fixture, args, done, spawnOpts = {}) => {
       )
     : unparse(args);
 
-  return [fixturePath, commandArgs, spawnOpts, done];
+  return [fixturePath, commandArgs, opts, done];
 };
 
 const parseEpilog = result =>
@@ -215,6 +132,18 @@ const callbackify = (promise, done) =>
       return output;
     });
 
+/**
+ * Runs Mocha with default reporter.
+ * @param {string|string[]|Function|Object} [fixture] - Fixture name or path or glob
+ * @param {string[]|Function|Object} [args] - Any args to pass to Mocha
+ * @param {Function|Object} [done] - Callback
+ * @param {Object} [opts] - Options
+ * @param {boolean} [opts.exactArgs=false] - Pass `args` to executable verbatim
+ * @param {number} [opts.killTimeout] - Kill child process after *n* ms
+ * @param {string|string[]} [opts.stdio] - `stdio` option for `child_process.spawn()`
+ * @param {string|boolean} [opts.wrap=auto] = Use `bin/mocha` wrapper if `true`, use `bin/_mocha` if `false`, otherwise `auto` (or anything else) to let the helper pick.
+ * @returns {Promise<RunResult>}
+ */
 exports.runMocha = (...params) => {
   const [fixturePath, args, opts, done] = parseParameters(...params);
   return callbackify(run(fixturePath, args, opts).then(parseEpilog), done);
@@ -229,7 +158,7 @@ exports.runMochaJSON = (...params) => {
 /**
  * regular expression used for splitting lines based on new line / dot symbol.
  */
-exports.splitRegExp = new RegExp('[\\n' + Base.symbols.dot + ']+');
+exports.splitRegExp = new RegExp('[\\n.' + Base.symbols.dot + ']+');
 
 /**
  * Given a regexp-like string, escape it so it can be used with the `RegExp` constructor

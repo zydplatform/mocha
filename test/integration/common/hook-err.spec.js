@@ -258,7 +258,6 @@ describe('hook error handling', function() {
     return function(done) {
       runMocha(fnPath, ['--reporter', 'dot'], function(err, res) {
         expect(err, 'to be falsy');
-
         lines = res.output
           .split(splitRegExp)
           .map(function(line) {
