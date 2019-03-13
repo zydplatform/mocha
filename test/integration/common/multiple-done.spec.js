@@ -1,6 +1,5 @@
 'use strict';
 
-var assert = require('assert');
 var run = require('../helpers').runMochaJSON;
 var args = [];
 
@@ -15,16 +14,13 @@ describe('multiple calls to done()', function() {
     });
 
     it('results in failures', function() {
-      assert.strictEqual(res.stats.pending, 0, 'wrong "pending" count');
-      assert.strictEqual(res.stats.passes, 1, 'wrong "passes" count');
-      assert.strictEqual(res.stats.failures, 1, 'wrong "failures" count');
+      expect(res, 'to have failed count', 1)
+        .and('to have passed count', 1)
+        .and('to have pending count', 0);
     });
 
     it('throws a descriptive error', function() {
-      assert.strictEqual(
-        res.failures[0].err.message,
-        'done() called multiple times'
-      );
+      expect(res, 'to have failed with error', 'done() called multiple times');
     });
   });
 
@@ -37,14 +33,15 @@ describe('multiple calls to done()', function() {
     });
 
     it('results in failures', function() {
-      assert.strictEqual(res.stats.pending, 0, 'wrong "pending" count');
-      assert.strictEqual(res.stats.passes, 1, 'wrong "passes" count');
-      assert.strictEqual(res.stats.failures, 1, 'wrong "failures" count');
+      expect(res, 'to have failed count', 1)
+        .and('to have passed count', 1)
+        .and('to have pending count', 0);
     });
 
     it('should throw a descriptive error', function() {
-      assert.strictEqual(
-        res.failures[0].err.message,
+      expect(
+        res,
+        'to have failed with error',
         "second error (and Mocha's done() called multiple times)"
       );
     });
@@ -59,16 +56,14 @@ describe('multiple calls to done()', function() {
     });
 
     it('results in a failure', function() {
-      assert.strictEqual(res.stats.pending, 0);
-      assert.strictEqual(res.stats.passes, 2);
-      assert.strictEqual(res.stats.failures, 1);
-      assert.strictEqual(res.code, 1);
+      expect(res, 'to have failed')
+        .and('to have failed count', 1)
+        .and('to have passed count', 2);
     });
 
     it('correctly attributes the error', function() {
-      assert.strictEqual(res.failures[0].fullTitle, 'suite test1');
-      assert.strictEqual(
-        res.failures[0].err.message,
+      expect(res, 'to have failed test', 'suite test1').and(
+        'to have failed with error',
         'done() called multiple times'
       );
     });
@@ -83,21 +78,17 @@ describe('multiple calls to done()', function() {
     });
 
     it('results in a failure', function() {
-      assert.strictEqual(res.stats.pending, 0);
-      assert.strictEqual(res.stats.passes, 1);
-      assert.strictEqual(res.stats.failures, 1);
-      assert.strictEqual(res.code, 1);
+      expect(res, 'to have failed')
+        .and('to have failed count', 1)
+        .and('to have passed count', 1);
     });
 
     it('correctly attributes the error', function() {
-      assert.strictEqual(
-        res.failures[0].fullTitle,
+      expect(
+        res,
+        'to have failed test',
         'suite "before all" hook in "suite"'
-      );
-      assert.strictEqual(
-        res.failures[0].err.message,
-        'done() called multiple times'
-      );
+      ).and('to have failed with error', 'done() called multiple times');
     });
   });
 
@@ -110,21 +101,24 @@ describe('multiple calls to done()', function() {
     });
 
     it('results in a failure', function() {
-      assert.strictEqual(res.stats.pending, 0);
-      assert.strictEqual(res.stats.passes, 2);
-      assert.strictEqual(res.stats.failures, 2);
-      assert.strictEqual(res.code, 2);
+      expect(res, 'to have failed')
+        .and('to have failed count', 2)
+        .and('to have passed count', 2)
+        .and('to have pending count', 0);
     });
 
     it('correctly attributes the errors', function() {
-      assert.strictEqual(res.failures.length, 2);
-      res.failures.forEach(function(failure) {
-        assert.strictEqual(
-          failure.fullTitle,
+      expect(res, 'to have failed test count', 2)
+        .and(
+          'to have failed test order',
+          'suite "before each" hook in "suite"',
           'suite "before each" hook in "suite"'
+        )
+        .and(
+          'to have failed with error order',
+          'done() called multiple times',
+          'done() called multiple times'
         );
-        assert.strictEqual(failure.err.message, 'done() called multiple times');
-      });
     });
   });
 });

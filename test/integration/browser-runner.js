@@ -5,6 +5,9 @@ const {loadRc} = require('../../lib/cli/options');
 const {unparse} = require('../../lib/cli/unparser');
 const MOCHIFY_EXECUTABLE = require.resolve('mochify/bin/cmd.js');
 const debug = require('debug')('mocha:test:browser-runner');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..', '..');
 
 /**
  * Ensure `DEBUG` is not passed to child processes.
@@ -18,17 +21,19 @@ const DEFAULT_SPAWN_OPTS = {
 const RC_OPTS = Object.assign(loadRc(), {
   global: undefined,
   timeout: 5000,
-  colors: false
+  require: undefined,
+  ui: undefined
 });
 const RC_ARGS = unparse(RC_OPTS).mochaArgs;
 
 exports.run = (filepath, {mochaArgs = []} = {}, opts = {}) => {
   const spawnArgs = opts.exactArgs
-    ? [MOCHIFY_EXECUTABLE].concat(RC_ARGS, mochaArgs, '--mocha-path=.')
+    ? [MOCHIFY_EXECUTABLE].concat(RC_ARGS, mochaArgs, `--mocha-path=${ROOT}`)
     : [MOCHIFY_EXECUTABLE].concat(
         RC_ARGS,
         mochaArgs,
-        '--mocha-path=.',
+        '--colors=false',
+        `--mocha-path=${ROOT}`,
         filepath
       );
   debug('spawn cmd: %O', spawnArgs.join(' '));

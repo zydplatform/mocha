@@ -144,39 +144,91 @@ exports.mixinMochaAssertions = function(expect) {
       }
     )
     .addAssertion(
-      '<JSONRunResult> [not] to have run (test|tests) <string+>',
+      '<JSONRunResult> [not] to have run (test|tests) <any+>',
       function(expect, result, titles) {
         Array.prototype.slice.call(arguments, 2).forEach(function(title) {
           expect(
-            result,
-            '[not] to have a value satisfying',
-            expect.it('to have an item satisfying', {title: title})
+            result.tests,
+            '[not] to have an item satisfying',
+            expect
+              .it('to satisfy', {title: title})
+              .or('to satisfy', {fullTitle: title})
           );
         });
       }
     )
     .addAssertion(
-      '<JSONRunResult> [not] to have failed (test|tests) <string+>',
-      function(expect, result, titles) {
-        Array.prototype.slice.call(arguments, 2).forEach(function(title) {
-          expect(result.failures, '[not] to have an item satisfying', {
-            title: title
-          });
+      '<JSONRunResult> [not] to have failed (test|tests) <any+>',
+      function(expect, result) {
+        var expectedTitles = Array.prototype.slice.call(arguments, 2);
+        expect.subjectOutput = function(output) {
+          output
+            .text('JSON run result ')
+            .appendInspected({
+              code: result.code,
+              stats: result.stats,
+              args: result.args,
+              execPath: result.execPath,
+              opts: result.opts
+            })
+            .text(' having run test(s) ')
+            .appendInspected(result.tests);
+        };
+        expectedTitles.forEach(function(title) {
+          expect(
+            result.failures,
+            '[not] to have an item satisfying',
+            expect
+              .it('to satisfy', {title: title})
+              .or('to satisfy', {fullTitle: title})
+          );
         });
       }
     )
     .addAssertion(
       '<JSONRunResult> [not] to have failed with (error|errors) <any+>',
-      function(expect, result, errors) {
-        expect(result, '[not] to have failed');
-        Array.prototype.slice.call(arguments, 2).forEach(function(error) {
-          expect(result, '[not] to satisfy', {
-            failures: expect.it('to have an item satisfying', {
-              err: expect
-                .it('to satisfy', error)
-                .or('to satisfy', {message: error})
+      function(expect, result) {
+        var expectedErrors = Array.prototype.slice.call(arguments, 2);
+        var actualErrors = result.failures.map(function(failure) {
+          return failure.err;
+        });
+        expect.subjectOutput = function(output) {
+          output
+            .text('JSON run result ')
+            .appendInspected({
+              code: result.code,
+              stats: result.stats,
+              args: result.args,
+              execPath: result.execPath,
+              opts: result.opts
             })
+            .text(' having failed test(s) with errors ')
+            .appendInspected(actualErrors);
+        };
+        expectedErrors.map(function(error) {
+          expect(result.failures, 'to have an item satisfying', {
+            err: expect
+              .it('to satisfy', error)
+              .or('to satisfy', {message: error})
           });
+        });
+      }
+    )
+    .addAssertion(
+      '<JSONRunResult> [not] to have failed with error order <any+>',
+      function(expect, result) {
+        var expectedErrors = Array.prototype.slice.call(arguments, 2);
+        expect(result, '[not] to have failed').and('[not] to satisfy', {
+          failures: expect.it(
+            'to satisfy',
+            expectedErrors.map(function(error) {
+              return {
+                err: expect
+                  .it('to satisfy', error)
+                  .or('to satisfy', {message: error})
+              };
+            })
+          )
         });
       }
     )
@@ -197,7 +249,9 @@ exports.mixinMochaAssertions = function(expect) {
           result[state].slice(0, titles.length),
           '[not] to satisfy',
           titles.map(function(title) {
-            return typeof title === 'string' ? {title: title} : title;
+            return expect
+              .it('to satisfy', {title: title})
+              .or('to satisfy', {fullTitle: title});
           })
         );
       }

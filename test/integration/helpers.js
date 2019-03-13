@@ -48,7 +48,7 @@ const resolveFixture = (exports.resolveFixture = fixture => {
   try {
     filepath = require.resolve(baseFilepath, {paths: FIXTURE_PATHS});
     resolveFixture.cache.set(fixture, filepath);
-    debug(`fixture "${fixture} resolved to ${filepath}`);
+    debug(`fixture "${fixture}" resolved to ${filepath}`);
     return filepath;
   } catch (err) {
     throw new Error(

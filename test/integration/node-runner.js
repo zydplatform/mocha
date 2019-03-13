@@ -30,7 +30,7 @@ exports.run = (filepath, {nodeArgs = [], mochaArgs = []} = {}, opts = {}) => {
   const spawnArgs = opts.exactArgs
     ? [executable].concat(nodeArgs, mochaArgs)
     : [executable].concat(nodeArgs, mochaArgs, '--no-color', filepath);
-  debug('spawn args: %O', spawnArgs);
+  debug('spawn cmd: %O', spawnArgs.join(' '));
   return spawnAsync(spawnArgs, opts);
 };
 
