@@ -266,7 +266,7 @@ module.exports = {
     docs: {
       default: {
         script:
-          'nps docs.prebuild && nps docs.api && eleventy && nps docs.linkcheck && nps docs.postbuild',
+          'nps docs.prebuild && nps docs.api && eleventy && nps docs.postbuild',
         description: 'Build documentation'
       },
       prebuild: {
