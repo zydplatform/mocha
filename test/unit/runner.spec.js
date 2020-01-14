@@ -14,6 +14,9 @@ var EVENT_TEST_FAIL = Runner.constants.EVENT_TEST_FAIL;
 var EVENT_TEST_RETRY = Runner.constants.EVENT_TEST_RETRY;
 var EVENT_RUN_END = Runner.constants.EVENT_RUN_END;
 var STATE_FAILED = Runnable.constants.STATE_FAILED;
+var STATE_IDLE = Runner.constants.STATE_IDLE;
+var STATE_RUNNING = Runner.constants.STATE_RUNNING;
+var STATE_STOPPED = Runner.constants.STATE_STOPPED;
 
 describe('Runner', function() {
   var sandbox;
@@ -743,7 +746,7 @@ describe('Runner', function() {
 
           describe('when Runner has already started', function() {
             beforeEach(function() {
-              runner.started = true;
+              runner.state = STATE_RUNNING;
             });
 
             it('should not emit start/end events', function() {
@@ -758,20 +761,39 @@ describe('Runner', function() {
             });
           });
 
-          describe('when Runner has not already started', function() {
-            beforeEach(function() {
-              runner.started = false;
+          describe('when Runner not running', function() {
+            describe('when idle', function() {
+              beforeEach(function() {
+                runner.state = STATE_IDLE;
+              });
+
+              it('should emit start/end events for the benefit of reporters', function() {
+                expect(
+                  function() {
+                    runner.uncaught(err);
+                  },
+                  'to emit from',
+                  runner,
+                  'start'
+                ).and('to emit from', runner, 'end');
+              });
             });
 
-            it('should emit start/end events for the benefit of reporters', function() {
-              expect(
-                function() {
-                  runner.uncaught(err);
-                },
-                'to emit from',
-                runner,
-                'start'
-              ).and('to emit from', runner, 'end');
+            describe('when stopped', function() {
+              beforeEach(function() {
+                runner.state = STATE_STOPPED;
+              });
+
+              it('should emit start/end events for the benefit of reporters', function() {
+                expect(
+                  function() {
+                    runner.uncaught(err);
+                  },
+                  'to emit from',
+                  runner,
+                  'start'
+                ).and('to emit from', runner, 'end');
+              });
             });
           });
         });
