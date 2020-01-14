@@ -2,8 +2,6 @@
 
 var runMochaJSON = require('./helpers').runMochaJSON;
 var invokeMocha = require('./helpers').invokeMocha;
-var ERR_MOCHA_MULTIPLE_DONE = require('../../lib/errors').constants
-  .ERR_MOCHA_MULTIPLE_DONE;
 
 describe('multiple calls to done()', function() {
   var res;
@@ -23,7 +21,11 @@ describe('multiple calls to done()', function() {
     });
 
     it('throws a descriptive error', function() {
-      expect(res, 'to have failed with error', 'done() called multiple times');
+      expect(
+        res,
+        'to have failed with error',
+        /done\(\) called multiple times in test <should fail in a test-case> \(of root suite\) of file.+multiple-done\.fixture\.js/
+      );
     });
   });
 
@@ -46,7 +48,7 @@ describe('multiple calls to done()', function() {
       expect(
         res,
         'to have failed with error',
-        "second error (and Mocha's done() called multiple times)"
+        /done\(\) called multiple times in test <should fail in a test-case> \(of root suite\) of file.+multiple-done\.fixture\.js; in addition, done\(\) received error: Error: second error/
       );
     });
   });
@@ -70,7 +72,7 @@ describe('multiple calls to done()', function() {
       expect(res.failures[0], 'to satisfy', {
         fullTitle: 'suite test1',
         err: {
-          message: 'done() called multiple times'
+          message: /done\(\) called multiple times in test <suite test1> of file.+multiple-done-specs\.fixture\.js/
         }
       });
     });
@@ -95,15 +97,15 @@ describe('multiple calls to done()', function() {
       expect(res.failures[0], 'to satisfy', {
         fullTitle: 'suite "before all" hook in "suite"',
         err: {
-          message: 'done() called multiple times'
+          message: /done\(\) called multiple times in hook <suite "before all" hook> of file.+multiple-done-before\.fixture\.js/
         }
       });
     });
   });
 
-  describe('from a beforeEach hook', function() {
+  describe('from a "before each" hook', function() {
     before(function(done) {
-      runMochaJSON('multiple-done-beforeEach', function(err, result) {
+      runMochaJSON('multiple-done-before-each', function(err, result) {
         res = result;
         done(err);
       });
@@ -120,11 +122,15 @@ describe('multiple calls to done()', function() {
       expect(res.failures, 'to satisfy', [
         {
           fullTitle: 'suite "before each" hook in "suite"',
-          err: {message: 'done() called multiple times'}
+          err: {
+            message: /done\(\) called multiple times in hook <suite "before each" hook> of file.+multiple-done-before-each\.fixture\.js/
+          }
         },
         {
           fullTitle: 'suite "before each" hook in "suite"',
-          err: {message: 'done() called multiple times'}
+          err: {
+            message: /done\(\) called multiple times in hook <suite "before each" hook> of file.+multiple-done-before-each\.fixture\.js/
+          }
         }
       ]);
     });
@@ -132,6 +138,8 @@ describe('multiple calls to done()', function() {
 
   describe('when done() called asynchronously', function() {
     before(function(done) {
+      // we can't be sure that mocha won't fail with an uncaught exception here, which would cause any JSON
+      // output to be befouled; we need to run "raw" and capture STDERR
       invokeMocha(
         require.resolve('./fixtures/multiple-done-async.fixture.js'),
         function(err, result) {
@@ -145,27 +153,7 @@ describe('multiple calls to done()', function() {
     it('results in error', function() {
       expect(res, 'to satisfy', {
         code: expect.it('to be greater than', 0),
-        output: /done\(\) called multiple times/
-      });
-    });
-
-    it('fail with an error containing the information about the test', function() {
-      expect(res.output, 'to match', /should fail in an async test case/);
-    });
-
-    describe('when errored after Runner has completed', function() {
-      // WARNING: non-deterministic!
-      before(function() {
-        if (/1\) should fail in an async test case/.test(res.output)) {
-          return this.skip();
-        }
-      });
-
-      it('should provide extra information about the Runnable', function() {
-        expect(res.output, 'to match', /multiple-done-async\.fixture\.js/)
-          .and('to match', /type: 'test'/)
-          .and('to match', /body: 'function/)
-          .and('to match', new RegExp(ERR_MOCHA_MULTIPLE_DONE));
+        output: /done\(\) called multiple times in test <should fail in an async test case> \(of root suite\) of file.+multiple-done-async\.fixture\.js/
       });
     });
   });
