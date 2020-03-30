@@ -33,6 +33,8 @@ overrides:
       browser: false
   - files:
       - esm-utils.js
+      - rollup.config.js
+      - scripts/rollup-manifest-filter.js
     parserOptions:
       ecmaVersion: 2018
       sourceType: module
