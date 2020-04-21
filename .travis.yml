@@ -38,6 +38,9 @@ jobs:
   include:
     - script: COVERAGE=1 npm start test.node
       after_success: npm start coveralls
+    - script: MOCHA_PARALLEL=0 npm start test.node.unit
+
+      name: 'Latest Node.js (unit tests in serial mode)'
 
     - &node
       script: npm start test.node
